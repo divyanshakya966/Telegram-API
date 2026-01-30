@@ -38,10 +38,10 @@ async def welcome_new_member(client: Client, message: Message):
             return
         
         # Get welcome message
-        welcome_data = await db.welcomes.find_one({"chat_id": message.chat.id})
+        welcome_data = await db.get_welcome(message.chat.id)
         
-        if welcome_data and welcome_data.get("text"):
-            welcome_text = welcome_data["text"]
+        if welcome_data and welcome_data.get("welcome_text"):
+            welcome_text = welcome_data["welcome_text"]
         else:
             welcome_text = "Welcome {mention} to {chat}! 👋"
         
@@ -77,7 +77,7 @@ async def goodbye_member(client: Client, message: Message):
         chat = await db.get_chat(message.chat.id)
         
         # Check if goodbye is enabled
-        goodbye_data = await db.welcomes.find_one({"chat_id": message.chat.id})
+        goodbye_data = await db.get_welcome(message.chat.id)
         
         if not goodbye_data or not goodbye_data.get("goodbye_enabled", False):
             return
@@ -132,17 +132,7 @@ async def set_welcome(client: Client, message: Message):
             photo_id = None
         
         # Save to database
-        await db.welcomes.update_one(
-            {"chat_id": message.chat.id},
-            {
-                "$set": {
-                    "text": welcome_text,
-                    "photo": photo_id,
-                    "welcome_enabled": True
-                }
-            },
-            upsert=True
-        )
+        await db.set_welcome(message.chat.id, welcome_text, photo_id)
         
         await message.reply_text(
             f"✅ Welcome message set!\n\n"
@@ -170,16 +160,7 @@ async def set_goodbye(client: Client, message: Message):
         goodbye_text = " ".join(message.command[1:])
         
         # Save to database
-        await db.welcomes.update_one(
-            {"chat_id": message.chat.id},
-            {
-                "$set": {
-                    "goodbye_text": goodbye_text,
-                    "goodbye_enabled": True
-                }
-            },
-            upsert=True
-        )
+        await db.set_goodbye(message.chat.id, goodbye_text)
         
         await message.reply_text(
             f"✅ Goodbye message set!\n\n"
@@ -206,10 +187,10 @@ async def toggle_welcome(client: Client, message: Message):
         action = message.command[1].lower()
         
         if action == "on":
-            await db.update_chat_settings(message.chat.id, {"welcome_enabled": True})
+            await db.toggle_welcome(message.chat.id, True)
             await message.reply_text("✅ Welcome messages enabled!")
         elif action == "off":
-            await db.update_chat_settings(message.chat.id, {"welcome_enabled": False})
+            await db.toggle_welcome(message.chat.id, False)
             await message.reply_text("❌ Welcome messages disabled!")
         else:
             await message.reply_text("❌ Invalid option! Use 'on' or 'off'")
@@ -218,16 +199,16 @@ async def toggle_welcome(client: Client, message: Message):
         await message.reply_text(f"❌ Error: {str(e)}")
 
 @Client.on_message(filters.command("getwelcome") & filters.group)
-async def get_welcome(client: Client, message: Message):
+async def get_welcome_message(client: Client, message: Message):
     """Show current welcome message"""
     try:
-        welcome_data = await db.welcomes.find_one({"chat_id": message.chat.id})
+        welcome_data = await db.get_welcome(message.chat.id)
         
-        if not welcome_data or not welcome_data.get("text"):
+        if not welcome_data or not welcome_data.get("welcome_text"):
             await message.reply_text("❌ No custom welcome message set!")
             return
         
-        text = f"**Current Welcome Message:**\n\n{welcome_data['text']}"
+        text = f"**Current Welcome Message:**\n\n{welcome_data['welcome_text']}"
         
         if welcome_data.get("photo"):
             await message.reply_photo(welcome_data["photo"], caption=text)
@@ -247,7 +228,7 @@ async def reset_welcome(client: Client, message: Message):
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         
-        await db.welcomes.delete_one({"chat_id": message.chat.id})
+        await db.delete_welcome(message.chat.id)
         await message.reply_text("✅ Welcome message reset to default!")
         
     except Exception as e:

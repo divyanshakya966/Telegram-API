@@ -98,7 +98,10 @@ class Database:
                 CREATE TABLE IF NOT EXISTS welcomes (
                     chat_id INTEGER PRIMARY KEY,
                     welcome_text TEXT,
-                    goodbye_text TEXT
+                    goodbye_text TEXT,
+                    photo TEXT,
+                    welcome_enabled BOOLEAN DEFAULT 1,
+                    goodbye_enabled BOOLEAN DEFAULT 0
                 )
             """)
             
@@ -393,5 +396,81 @@ class Database:
             cursor.execute("SELECT word FROM blacklist WHERE chat_id = ?", (chat_id,))
             rows = cursor.fetchall()
             return [row[0] for row in rows]
+        finally:
+            conn.close()
+    
+    # Welcome message operations
+    @async_db_operation
+    def get_welcome(self, chat_id: int) -> Optional[Dict[str, Any]]:
+        """Get welcome message settings for a chat"""
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM welcomes WHERE chat_id = ?", (chat_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+    
+    @async_db_operation
+    def set_welcome(self, chat_id: int, welcome_text: str, photo: Optional[str] = None):
+        """Set welcome message for a chat"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO welcomes (chat_id, welcome_text, photo, welcome_enabled)
+                VALUES (?, ?, ?, 1)
+                ON CONFLICT(chat_id) DO UPDATE SET
+                    welcome_text = excluded.welcome_text,
+                    photo = excluded.photo,
+                    welcome_enabled = 1
+            """, (chat_id, welcome_text, photo))
+            conn.commit()
+        finally:
+            conn.close()
+    
+    @async_db_operation
+    def set_goodbye(self, chat_id: int, goodbye_text: str):
+        """Set goodbye message for a chat"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO welcomes (chat_id, goodbye_text, goodbye_enabled)
+                VALUES (?, ?, 1)
+                ON CONFLICT(chat_id) DO UPDATE SET
+                    goodbye_text = excluded.goodbye_text,
+                    goodbye_enabled = 1
+            """, (chat_id, goodbye_text))
+            conn.commit()
+        finally:
+            conn.close()
+    
+    @async_db_operation
+    def delete_welcome(self, chat_id: int):
+        """Delete welcome message for a chat"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM welcomes WHERE chat_id = ?", (chat_id,))
+            conn.commit()
+        finally:
+            conn.close()
+    
+    @async_db_operation
+    def toggle_welcome(self, chat_id: int, enabled: bool):
+        """Toggle welcome messages on/off"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO welcomes (chat_id, welcome_enabled)
+                VALUES (?, ?)
+                ON CONFLICT(chat_id) DO UPDATE SET
+                    welcome_enabled = excluded.welcome_enabled
+            """, (chat_id, enabled))
+            conn.commit()
         finally:
             conn.close()
