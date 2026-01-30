@@ -31,14 +31,12 @@ def format_welcome(text, user, chat):
 async def welcome_new_member(client: Client, message: Message):
     """Send welcome message to new members"""
     try:
-        chat = await db.get_chat(message.chat.id)
-        
-        # Check if welcome is enabled
-        if not chat or not chat.get("welcome_enabled", True):
-            return
-        
-        # Get welcome message
+        # Get welcome message and check if enabled
         welcome_data = await db.get_welcome(message.chat.id)
+        
+        # Check if welcome is enabled (default to True if no settings)
+        if welcome_data and not welcome_data.get("welcome_enabled", True):
+            return
         
         if welcome_data and welcome_data.get("welcome_text"):
             welcome_text = welcome_data["welcome_text"]
@@ -74,8 +72,6 @@ async def welcome_new_member(client: Client, message: Message):
 async def goodbye_member(client: Client, message: Message):
     """Send goodbye message when member leaves"""
     try:
-        chat = await db.get_chat(message.chat.id)
-        
         # Check if goodbye is enabled
         goodbye_data = await db.get_welcome(message.chat.id)
         
