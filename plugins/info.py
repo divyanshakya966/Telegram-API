@@ -24,7 +24,9 @@ async def user_info(client: Client, message: Message):
             user = message.from_user
         
         # Get user photos
-        photos = await client.get_chat_photos(user.id, limit=1)
+        photos = []
+        async for photo in client.get_chat_photos(user.id, limit=1):
+            photos.append(photo)
         
         # Get common chats
         try:
