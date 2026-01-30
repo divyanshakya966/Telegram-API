@@ -192,10 +192,11 @@ async def warn_user(client: Client, message: Message):
             await db.reset_warnings(message.chat.id, user_id)
             await message.reply_text(f"🚫 {user_name} has been banned for exceeding warning limit!")
         else:
-            await message.reply_text(
-                f"⚠️ {user_name} has been warned! [{warnings}/3]\n"
-                f"Reason: {' '.join(message.command[1:])} " if len(message.command) > 1 else ""
-            )
+            warn_msg = f"⚠️ {user_name} has been warned! [{warnings}/3]"
+            if len(message.command) > 1:
+                reason = ' '.join(message.command[1:])
+                warn_msg += f"\nReason: {reason}"
+            await message.reply_text(warn_msg)
         
     except Exception as e:
         await message.reply_text(f"❌ Error: {str(e)}")
@@ -297,14 +298,12 @@ async def promote_user(client: Client, message: Message):
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            privileges={
-                "can_change_info": True,
-                "can_delete_messages": True,
-                "can_restrict_members": True,
-                "can_invite_users": True,
-                "can_pin_messages": True,
-                "can_promote_members": False
-            }
+            can_change_info=True,
+            can_delete_messages=True,
+            can_restrict_members=True,
+            can_invite_users=True,
+            can_pin_messages=True,
+            can_promote_members=False
         )
         await message.reply_text(f"⬆️ Promoted {user_name} to admin!")
         
@@ -330,7 +329,12 @@ async def demote_user(client: Client, message: Message):
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            privileges={}
+            can_change_info=False,
+            can_delete_messages=False,
+            can_restrict_members=False,
+            can_invite_users=False,
+            can_pin_messages=False,
+            can_promote_members=False
         )
         await message.reply_text(f"⬇️ Demoted {user_name}!")
         

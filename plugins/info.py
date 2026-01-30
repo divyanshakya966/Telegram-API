@@ -154,11 +154,26 @@ async def whois(client: Client, message: Message):
                 "recently": "🟡 Recently",
                 "last_week": "🟠 Within Week",
                 "last_month": "🔴 Within Month",
-                "long_ago": "⚫ Long Time Ago"
+                "long_ago": "⚫ Long Time Ago",
+                "UserStatus.ONLINE": "🟢 Online",
+                "UserStatus.OFFLINE": "⚫ Offline",
+                "UserStatus.RECENTLY": "🟡 Recently",
+                "UserStatus.LAST_WEEK": "🟠 Within Week",
+                "UserStatus.LAST_MONTH": "🔴 Within Month",
+                "UserStatus.LONG_AGO": "⚫ Long Time Ago"
             }
-            # Handle both enum and string status
-            status_value = user.status.value if hasattr(user.status, 'value') else str(user.status)
-            text += f"📊 **Status:** {status_map.get(status_value, 'Unknown')}\n"
+            # Handle both enum and string status - convert to string safely
+            try:
+                if hasattr(user.status, 'value'):
+                    status_value = user.status.value
+                elif hasattr(user.status, 'name'):
+                    status_value = user.status.name.lower()
+                else:
+                    status_value = str(user.status).replace('UserStatus.', '').lower()
+            except Exception:
+                status_value = "unknown"
+            
+            text += f"📊 **Status:** {status_map.get(status_value, status_map.get(str(user.status), 'Unknown'))}\n"
         
         await message.reply_text(text)
         

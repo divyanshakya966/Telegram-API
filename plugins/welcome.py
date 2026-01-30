@@ -50,6 +50,10 @@ async def welcome_new_member(client: Client, message: Message):
             
             formatted_text = format_welcome(welcome_text, user, message.chat)
             
+            # Ensure the formatted text is not empty
+            if not formatted_text or not formatted_text.strip():
+                formatted_text = f"Welcome {user.mention}!"
+            
             # Send with photo if available
             if welcome_data and welcome_data.get("photo"):
                 try:

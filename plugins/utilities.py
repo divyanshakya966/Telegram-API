@@ -158,6 +158,8 @@ async def save_note(client: Client, message: Message):
         else:
             note_content = " ".join(message.command[2:])
         
+        # Strip whitespace and check if content is empty
+        note_content = note_content.strip()
         if not note_content:
             await message.reply_text("❌ No content to save!")
             return
@@ -180,7 +182,11 @@ async def get_note(client: Client, message: Message):
         note = await db.get_note(message.chat.id, note_name)
         
         if note:
-            await message.reply_text(note["content"])
+            note_content = note.get("content", "").strip()
+            if note_content:
+                await message.reply_text(note_content)
+            else:
+                await message.reply_text(f"❌ Note `{note_name}` is empty!")
         else:
             await message.reply_text(f"❌ Note `{note_name}` not found!")
         
@@ -267,7 +273,7 @@ async def check_afk(client: Client, message: Message):
 @Client.on_message(filters.command("dice"))
 async def roll_dice(client: Client, message: Message):
     """Roll a dice"""
-    await message.reply_dice("🎲")
+    await client.send_dice(message.chat.id, "🎲")
 
 @Client.on_message(filters.command("coinflip"))
 async def flip_coin(client: Client, message: Message):
