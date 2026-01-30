@@ -7,6 +7,7 @@ from pyrogram.errors import ChatAdminRequired, UserAdminInvalid, FloodWait
 from pyrogram.enums import ChatMemberStatus
 from database import Database
 from logger import LOGGER
+from config import Config
 import asyncio
 from datetime import datetime, timedelta
 
@@ -22,6 +23,10 @@ def admin_check(func):
         return await func(client, message)
     return wrapper
 
+def is_owner(user_id: int) -> bool:
+    """Check if user is the bot owner"""
+    return user_id == Config.OWNER_ID
+
 @Client.on_message(filters.command("ban") & filters.group)
 @admin_check
 async def ban_user(client: Client, message: Message):
@@ -36,6 +41,11 @@ async def ban_user(client: Client, message: Message):
             user_name = user.first_name
         else:
             await message.reply_text("❌ Reply to a user or provide user ID!")
+            return
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot ban the bot owner!")
             return
         
         # Check if target is admin
@@ -84,6 +94,11 @@ async def kick_user(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot kick the bot owner!")
+            return
+        
         target_member = await client.get_chat_member(message.chat.id, user_id)
         if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ Cannot kick an admin!")
@@ -123,6 +138,11 @@ async def mute_user(client: Client, message: Message):
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
+            return
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot mute the bot owner!")
             return
         
         # Parse time if provided
@@ -172,6 +192,11 @@ async def unmute_user(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner (informational, unmuting owner is harmless)
+        if is_owner(user_id):
+            await message.reply_text("ℹ️ The bot owner cannot be muted, so unmute is not needed!")
+            return
+        
         await client.restrict_chat_member(
             message.chat.id,
             user_id,
@@ -202,6 +227,11 @@ async def warn_user(client: Client, message: Message):
         
         user_id = message.reply_to_message.from_user.id
         user_name = message.reply_to_message.from_user.first_name
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot warn the bot owner!")
+            return
         
         await db.add_warning(message.chat.id, user_id)
         warnings = await db.get_warnings(message.chat.id, user_id)
@@ -314,6 +344,11 @@ async def promote_user(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("ℹ️ The bot owner already has full privileges!")
+            return
+        
         await client.promote_chat_member(
             message.chat.id,
             user_id,
@@ -344,6 +379,11 @@ async def demote_user(client: Client, message: Message):
             user_name = user.first_name
         else:
             await message.reply_text("❌ Reply to a user or provide user ID!")
+            return
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot demote the bot owner!")
             return
         
         await client.promote_chat_member(
