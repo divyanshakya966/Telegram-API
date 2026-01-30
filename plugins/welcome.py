@@ -195,7 +195,7 @@ async def toggle_welcome(client: Client, message: Message):
         await message.reply_text(f"❌ Error: {str(e)}")
 
 @Client.on_message(filters.command("getwelcome") & filters.group)
-async def get_welcome_message(client: Client, message: Message):
+async def show_welcome_message(client: Client, message: Message):
     """Show current welcome message"""
     try:
         welcome_data = await db.get_welcome(message.chat.id)

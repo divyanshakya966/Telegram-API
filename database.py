@@ -108,18 +108,21 @@ class Database:
             # Migration: Add new columns if they don't exist
             try:
                 cursor.execute("ALTER TABLE welcomes ADD COLUMN photo TEXT")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e).lower():
+                    LOGGER.warning(f"Could not add photo column: {e}")
             
             try:
                 cursor.execute("ALTER TABLE welcomes ADD COLUMN welcome_enabled BOOLEAN DEFAULT 1")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e).lower():
+                    LOGGER.warning(f"Could not add welcome_enabled column: {e}")
             
             try:
                 cursor.execute("ALTER TABLE welcomes ADD COLUMN goodbye_enabled BOOLEAN DEFAULT 0")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e).lower():
+                    LOGGER.warning(f"Could not add goodbye_enabled column: {e}")
             
             # Blacklist table
             cursor.execute("""
@@ -418,7 +421,18 @@ class Database:
     # Welcome message operations
     @async_db_operation
     def get_welcome(self, chat_id: int) -> Optional[Dict[str, Any]]:
-        """Get welcome message settings for a chat"""
+        """Get welcome message settings for a chat
+        
+        Returns:
+            Optional[Dict]: Dictionary with keys:
+                - chat_id (int): Chat ID
+                - welcome_text (str|None): Welcome message text
+                - goodbye_text (str|None): Goodbye message text
+                - photo (str|None): Photo file ID
+                - welcome_enabled (int): 1 if enabled, 0 if disabled
+                - goodbye_enabled (int): 1 if enabled, 0 if disabled
+            Returns None if no settings exist for this chat.
+        """
         conn = self._get_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -431,17 +445,16 @@ class Database:
     
     @async_db_operation
     def set_welcome(self, chat_id: int, welcome_text: str, photo: Optional[str] = None):
-        """Set welcome message for a chat"""
+        """Set welcome message for a chat (does not change enabled state)"""
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                INSERT INTO welcomes (chat_id, welcome_text, photo, welcome_enabled)
-                VALUES (?, ?, ?, 1)
+                INSERT INTO welcomes (chat_id, welcome_text, photo)
+                VALUES (?, ?, ?)
                 ON CONFLICT(chat_id) DO UPDATE SET
                     welcome_text = excluded.welcome_text,
-                    photo = excluded.photo,
-                    welcome_enabled = 1
+                    photo = excluded.photo
             """, (chat_id, welcome_text, photo))
             conn.commit()
         finally:
@@ -449,16 +462,15 @@ class Database:
     
     @async_db_operation
     def set_goodbye(self, chat_id: int, goodbye_text: str):
-        """Set goodbye message for a chat"""
+        """Set goodbye message for a chat (does not change enabled state)"""
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                INSERT INTO welcomes (chat_id, goodbye_text, goodbye_enabled)
-                VALUES (?, ?, 1)
+                INSERT INTO welcomes (chat_id, goodbye_text)
+                VALUES (?, ?)
                 ON CONFLICT(chat_id) DO UPDATE SET
-                    goodbye_text = excluded.goodbye_text,
-                    goodbye_enabled = 1
+                    goodbye_text = excluded.goodbye_text
             """, (chat_id, goodbye_text))
             conn.commit()
         finally:
@@ -486,7 +498,7 @@ class Database:
                 VALUES (?, ?)
                 ON CONFLICT(chat_id) DO UPDATE SET
                     welcome_enabled = excluded.welcome_enabled
-            """, (chat_id, enabled))
+            """, (chat_id, 1 if enabled else 0))
             conn.commit()
         finally:
             conn.close()
