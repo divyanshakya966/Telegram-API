@@ -4,6 +4,7 @@ Admin management commands
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
 from pyrogram.errors import ChatAdminRequired, UserAdminInvalid, FloodWait
+from pyrogram.enums import ChatMemberStatus
 from database import Database
 from logger import LOGGER
 import asyncio
@@ -15,7 +16,7 @@ def admin_check(func):
     """Decorator to check if user is admin"""
     async def wrapper(client: Client, message: Message):
         chat_member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if chat_member.status not in ["creator", "administrator"]:
+        if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         return await func(client, message)
@@ -39,7 +40,7 @@ async def ban_user(client: Client, message: Message):
         
         # Check if target is admin
         target_member = await client.get_chat_member(message.chat.id, user_id)
-        if target_member.status in ["creator", "administrator"]:
+        if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ Cannot ban an admin!")
             return
         
@@ -84,7 +85,7 @@ async def kick_user(client: Client, message: Message):
             return
         
         target_member = await client.get_chat_member(message.chat.id, user_id)
-        if target_member.status in ["creator", "administrator"]:
+        if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ Cannot kick an admin!")
             return
         

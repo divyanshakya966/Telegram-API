@@ -4,6 +4,7 @@ User information extraction commands
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.errors import PeerIdInvalid, UsernameNotOccupied
+from pyrogram.enums import ChatMemberStatus
 from logger import LOGGER
 import time
 
@@ -149,11 +150,13 @@ async def whois(client: Client, message: Message):
                 "online": "🟢 Online",
                 "offline": "⚫ Offline",
                 "recently": "🟡 Recently",
-                "within_week": "🟠 Within Week",
-                "within_month": "🔴 Within Month",
-                "long_time_ago": "⚫ Long Time Ago"
+                "last_week": "🟠 Within Week",
+                "last_month": "🔴 Within Month",
+                "long_ago": "⚫ Long Time Ago"
             }
-            text += f"📊 **Status:** {status_map.get(str(user.status), 'Unknown')}\n"
+            # Handle both enum and string status
+            status_value = user.status.value if hasattr(user.status, 'value') else str(user.status)
+            text += f"📊 **Status:** {status_map.get(status_value, 'Unknown')}\n"
         
         await message.reply_text(text)
         
@@ -217,7 +220,7 @@ async def list_admins(client: Client, message: Message):
         admins_list = []
         
         async for member in client.get_chat_members(message.chat.id, filter="administrators"):
-            status_emoji = "👑" if member.status == "creator" else "👮"
+            status_emoji = "👑" if member.status == ChatMemberStatus.OWNER else "👮"
             user = member.user
             name = user.first_name
             if user.username:
