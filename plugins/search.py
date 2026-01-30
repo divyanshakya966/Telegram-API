@@ -55,10 +55,21 @@ async def wikipedia_search(client: Client, message: Message):
                 if response.status == 200:
                     data = await response.json()
                     
+                    # Check if the page type is valid (not a disambiguation or missing page)
+                    page_type = data.get('type', '')
+                    if page_type == 'disambiguation':
+                        await status.edit_text(f"❌ '{query}' is a disambiguation page. Please be more specific!")
+                        return
+                    
                     title = data.get('title', 'Not Found')
                     extract = data.get('extract', 'No information available.')
                     page_url = data.get('content_urls', {}).get('desktop', {}).get('page', '')
                     thumbnail = data.get('thumbnail', {}).get('source', '')
+                    
+                    # Check if we got meaningful content
+                    if not extract or not extract.strip():
+                        await status.edit_text(f"❌ No information found for '{query}'!")
+                        return
                     
                     text = f"📚 **Wikipedia - {title}**\n\n{extract}"
                     
@@ -77,12 +88,15 @@ async def wikipedia_search(client: Client, message: Message):
                                 caption=text,
                                 reply_markup=keyboard
                             )
-                        except:
+                        except Exception as photo_err:
+                            LOGGER.error(f"Failed to send photo: {photo_err}")
                             await status.edit_text(text, reply_markup=keyboard)
                     else:
                         await status.edit_text(text, reply_markup=keyboard)
+                elif response.status == 404:
+                    await status.edit_text(f"❌ No Wikipedia page found for '{query}'!")
                 else:
-                    await status.edit_text("❌ No results found!")
+                    await status.edit_text(f"❌ Error searching Wikipedia (Status: {response.status})")
         
     except Exception as e:
         await message.reply_text(f"❌ Error: {str(e)}")

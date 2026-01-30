@@ -7,6 +7,7 @@ from pyrogram.errors import ChatAdminRequired, UserAdminInvalid, FloodWait
 from pyrogram.enums import ChatMemberStatus
 from database import Database
 from logger import LOGGER
+from config import Config
 import asyncio
 from datetime import datetime, timedelta
 
@@ -22,6 +23,10 @@ def admin_check(func):
         return await func(client, message)
     return wrapper
 
+def is_owner(user_id: int) -> bool:
+    """Check if user is the bot owner"""
+    return user_id == Config.OWNER_ID
+
 @Client.on_message(filters.command("ban") & filters.group)
 @admin_check
 async def ban_user(client: Client, message: Message):
@@ -36,6 +41,11 @@ async def ban_user(client: Client, message: Message):
             user_name = user.first_name
         else:
             await message.reply_text("❌ Reply to a user or provide user ID!")
+            return
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot ban the bot owner!")
             return
         
         # Check if target is admin
@@ -84,6 +94,11 @@ async def kick_user(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot kick the bot owner!")
+            return
+        
         target_member = await client.get_chat_member(message.chat.id, user_id)
         if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ Cannot kick an admin!")
@@ -106,23 +121,47 @@ async def mute_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                else:
+                    user = await client.get_users(int(user_input))
+                user_id = user.id
+                user_name = user.first_name
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
+            return
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot mute the bot owner!")
             return
         
         # Parse time if provided
         mute_time = None
         if len(message.command) > 2:
             time_str = message.command[2]
-            if time_str.endswith('m'):
-                mute_time = datetime.now() + timedelta(minutes=int(time_str[:-1]))
-            elif time_str.endswith('h'):
-                mute_time = datetime.now() + timedelta(hours=int(time_str[:-1]))
-            elif time_str.endswith('d'):
-                mute_time = datetime.now() + timedelta(days=int(time_str[:-1]))
+            try:
+                if time_str.endswith('m'):
+                    mute_time = datetime.now() + timedelta(minutes=int(time_str[:-1]))
+                elif time_str.endswith('h'):
+                    mute_time = datetime.now() + timedelta(hours=int(time_str[:-1]))
+                elif time_str.endswith('d'):
+                    mute_time = datetime.now() + timedelta(days=int(time_str[:-1]))
+                else:
+                    await message.reply_text("❌ Invalid time format! Use: 10m, 2h, or 1d")
+                    return
+            except (ValueError, OverflowError):
+                await message.reply_text("❌ Invalid time value! Use format like: 10m, 2h, or 1d")
+                return
         
         await client.restrict_chat_member(
             message.chat.id,
@@ -151,6 +190,11 @@ async def unmute_user(client: Client, message: Message):
             user_name = user.first_name
         else:
             await message.reply_text("❌ Reply to a user or provide user ID!")
+            return
+        
+        # Check if target is the bot owner (informational, unmuting owner is harmless)
+        if is_owner(user_id):
+            await message.reply_text("ℹ️ The bot owner cannot be muted, so unmute is not needed!")
             return
         
         await client.restrict_chat_member(
@@ -184,6 +228,11 @@ async def warn_user(client: Client, message: Message):
         user_id = message.reply_to_message.from_user.id
         user_name = message.reply_to_message.from_user.first_name
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot warn the bot owner!")
+            return
+        
         await db.add_warning(message.chat.id, user_id)
         warnings = await db.get_warnings(message.chat.id, user_id)
         
@@ -212,6 +261,11 @@ async def reset_warns(client: Client, message: Message):
             user_id = int(message.command[1])
         else:
             await message.reply_text("❌ Reply to a user or provide user ID!")
+            return
+        
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("ℹ️ The bot owner cannot receive warnings!")
             return
         
         await db.reset_warnings(message.chat.id, user_id)
@@ -295,15 +349,21 @@ async def promote_user(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot promote the bot owner!")
+            return
+        
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            can_change_info=True,
             can_delete_messages=True,
             can_restrict_members=True,
             can_invite_users=True,
             can_pin_messages=True,
-            can_promote_members=False
+            can_promote_members=False,
+            can_manage_chat=True,
+            can_manage_video_chats=True
         )
         await message.reply_text(f"⬆️ Promoted {user_name} to admin!")
         
@@ -326,15 +386,21 @@ async def demote_user(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("❌ Cannot demote the bot owner!")
+            return
+        
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            can_change_info=False,
             can_delete_messages=False,
             can_restrict_members=False,
             can_invite_users=False,
             can_pin_messages=False,
-            can_promote_members=False
+            can_promote_members=False,
+            can_manage_chat=False,
+            can_manage_video_chats=False
         )
         await message.reply_text(f"⬇️ Demoted {user_name}!")
         
