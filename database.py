@@ -105,6 +105,22 @@ class Database:
                 )
             """)
             
+            # Migration: Add new columns if they don't exist
+            try:
+                cursor.execute("ALTER TABLE welcomes ADD COLUMN photo TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            try:
+                cursor.execute("ALTER TABLE welcomes ADD COLUMN welcome_enabled BOOLEAN DEFAULT 1")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            try:
+                cursor.execute("ALTER TABLE welcomes ADD COLUMN goodbye_enabled BOOLEAN DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
             # Blacklist table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS blacklist (
