@@ -154,13 +154,7 @@ async def whois(client: Client, message: Message):
                 "recently": "🟡 Recently",
                 "last_week": "🟠 Within Week",
                 "last_month": "🔴 Within Month",
-                "long_ago": "⚫ Long Time Ago",
-                "UserStatus.ONLINE": "🟢 Online",
-                "UserStatus.OFFLINE": "⚫ Offline",
-                "UserStatus.RECENTLY": "🟡 Recently",
-                "UserStatus.LAST_WEEK": "🟠 Within Week",
-                "UserStatus.LAST_MONTH": "🔴 Within Month",
-                "UserStatus.LONG_AGO": "⚫ Long Time Ago"
+                "long_ago": "⚫ Long Time Ago"
             }
             # Handle both enum and string status - convert to string safely
             try:
@@ -173,7 +167,7 @@ async def whois(client: Client, message: Message):
             except Exception:
                 status_value = "unknown"
             
-            text += f"📊 **Status:** {status_map.get(status_value, status_map.get(str(user.status), 'Unknown'))}\n"
+            text += f"📊 **Status:** {status_map.get(status_value, 'Unknown')}\n"
         
         await message.reply_text(text)
         
