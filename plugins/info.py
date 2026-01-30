@@ -231,7 +231,13 @@ async def list_admins(client: Client, message: Message):
         admins_list = []
         
         async for member in client.get_chat_members(message.chat.id, filter="administrators"):
-            status_emoji = "👑" if member.status == ChatMemberStatus.OWNER else "👮"
+            # Handle enum status properly
+            if hasattr(member.status, 'value'):
+                is_owner = member.status.value == 'owner' or member.status == ChatMemberStatus.OWNER
+            else:
+                is_owner = str(member.status).lower() == 'owner' or member.status == ChatMemberStatus.OWNER
+            
+            status_emoji = "👑" if is_owner else "👮"
             user = member.user
             name = user.first_name
             if user.username:

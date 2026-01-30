@@ -248,17 +248,15 @@ async def set_afk(client: Client, message: Message):
 async def check_afk(client: Client, message: Message):
     """Check if mentioned user is AFK"""
     try:
-        # Check if sender was AFK
+        # Check if sender was AFK - only remove status, don't send message yet
         sender_afk = await db.is_afk(message.from_user.id)
+        sender_was_afk = False
         if sender_afk:
             await db.remove_afk(message.from_user.id)
-            await message.reply_text(
-                f"👋 Welcome back {message.from_user.first_name}! "
-                f"You are no longer AFK."
-            )
+            sender_was_afk = True
         
         # Check if replied user is AFK
-        if message.reply_to_message:
+        if message.reply_to_message and message.reply_to_message.from_user:
             user_id = message.reply_to_message.from_user.id
             afk_data = await db.is_afk(user_id)
             if afk_data:
@@ -266,6 +264,13 @@ async def check_afk(client: Client, message: Message):
                 if afk_data.get("reason"):
                     afk_text += f"\n📝 Reason: {afk_data['reason']}"
                 await message.reply_text(afk_text)
+        
+        # Send "back" message ONLY if sender was AFK and no other AFK message was sent
+        if sender_was_afk:
+            await message.reply_text(
+                f"👋 Welcome back {message.from_user.first_name}! "
+                f"You are no longer AFK."
+            )
         
     except Exception as e:
         LOGGER.error(f"AFK check error: {e}")
@@ -331,3 +336,111 @@ async def broadcast_message(client: Client, message: Message):
         f"📤 Sent: {sent}\n"
         f"❌ Failed: {failed}"
     )
+
+@Client.on_message(filters.command("blacklist") & filters.group)
+async def add_blacklist(client: Client, message: Message):
+    """Add word to blacklist"""
+    from pyrogram.enums import ChatMemberStatus
+    
+    try:
+        # Check if admin
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+            await message.reply_text("❌ You need to be an admin to use this command!")
+            return
+        
+        if len(message.command) < 2:
+            await message.reply_text("❌ Usage: /blacklist [word]")
+            return
+        
+        word = " ".join(message.command[1:]).lower()
+        await db.add_to_blacklist(message.chat.id, word)
+        await message.reply_text(f"✅ Added `{word}` to blacklist!")
+        
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {str(e)}")
+        LOGGER.error(f"Blacklist error: {e}")
+
+@Client.on_message(filters.command("rmblacklist") & filters.group)
+async def remove_blacklist(client: Client, message: Message):
+    """Remove word from blacklist"""
+    from pyrogram.enums import ChatMemberStatus
+    
+    try:
+        # Check if admin
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+            await message.reply_text("❌ You need to be an admin to use this command!")
+            return
+        
+        if len(message.command) < 2:
+            await message.reply_text("❌ Usage: /rmblacklist [word]")
+            return
+        
+        word = " ".join(message.command[1:]).lower()
+        await db.remove_from_blacklist(message.chat.id, word)
+        await message.reply_text(f"✅ Removed `{word}` from blacklist!")
+        
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {str(e)}")
+        LOGGER.error(f"Remove blacklist error: {e}")
+
+@Client.on_message(filters.command("getblacklist") & filters.group)
+async def show_blacklist(client: Client, message: Message):
+    """Show blacklisted words"""
+    try:
+        blacklist = await db.get_blacklist(message.chat.id)
+        
+        if not blacklist:
+            await message.reply_text("📝 No words in blacklist!")
+            return
+        
+        text = "🚫 **Blacklisted Words:**\n\n"
+        for word in blacklist:
+            text += f"• `{word}`\n"
+        
+        text += f"\n**Total:** {len(blacklist)} words"
+        await message.reply_text(text)
+        
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {str(e)}")
+        LOGGER.error(f"Get blacklist error: {e}")
+
+@Client.on_message(filters.text & filters.group, group=2)
+async def check_blacklist(client: Client, message: Message):
+    """Check and delete messages with blacklisted words"""
+    from pyrogram.enums import ChatMemberStatus
+    
+    try:
+        # Skip if from admin
+        member = await client.get_chat_member(message.chat.id, message.from_user.id)
+        if member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+            return
+        
+        # Get blacklist
+        blacklist = await db.get_blacklist(message.chat.id)
+        
+        if not blacklist:
+            return
+        
+        # Check if message contains blacklisted words
+        message_text = (message.text or message.caption or "").lower()
+        
+        for word in blacklist:
+            if word in message_text:
+                try:
+                    await message.delete()
+                    warn_msg = await message.reply_text(
+                        f"⚠️ {message.from_user.mention}, your message was deleted "
+                        f"because it contains a blacklisted word!"
+                    )
+                    # Auto-delete warning after 5 seconds
+                    import asyncio
+                    await asyncio.sleep(5)
+                    await warn_msg.delete()
+                except:
+                    pass
+                break
+        
+    except Exception as e:
+        LOGGER.error(f"Blacklist check error: {e}")
