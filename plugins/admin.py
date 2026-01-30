@@ -263,6 +263,11 @@ async def reset_warns(client: Client, message: Message):
             await message.reply_text("❌ Reply to a user or provide user ID!")
             return
         
+        # Check if target is the bot owner
+        if is_owner(user_id):
+            await message.reply_text("ℹ️ The bot owner cannot receive warnings!")
+            return
+        
         await db.reset_warnings(message.chat.id, user_id)
         await message.reply_text("✅ Warnings reset!")
         
@@ -346,7 +351,7 @@ async def promote_user(client: Client, message: Message):
         
         # Check if target is the bot owner
         if is_owner(user_id):
-            await message.reply_text("ℹ️ The bot owner already has full privileges!")
+            await message.reply_text("❌ Cannot promote the bot owner!")
             return
         
         await client.promote_chat_member(
