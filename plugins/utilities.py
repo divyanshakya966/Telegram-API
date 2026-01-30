@@ -248,14 +248,17 @@ async def set_afk(client: Client, message: Message):
 async def check_afk(client: Client, message: Message):
     """Check if mentioned user is AFK"""
     try:
-        # Check if sender was AFK - only remove status, don't send message yet
+        # Check if sender was AFK
         sender_afk = await db.is_afk(message.from_user.id)
-        sender_was_afk = False
         if sender_afk:
             await db.remove_afk(message.from_user.id)
-            sender_was_afk = True
+            await message.reply_text(
+                f"👋 Welcome back {message.from_user.first_name}! "
+                f"You are no longer AFK."
+            )
+            return  # Exit to avoid checking reply-to AFK status
         
-        # Check if replied user is AFK
+        # Check if replied user is AFK (only if sender wasn't AFK)
         if message.reply_to_message and message.reply_to_message.from_user:
             user_id = message.reply_to_message.from_user.id
             afk_data = await db.is_afk(user_id)
@@ -264,13 +267,6 @@ async def check_afk(client: Client, message: Message):
                 if afk_data.get("reason"):
                     afk_text += f"\n📝 Reason: {afk_data['reason']}"
                 await message.reply_text(afk_text)
-        
-        # Send "back" message ONLY if sender was AFK and no other AFK message was sent
-        if sender_was_afk:
-            await message.reply_text(
-                f"👋 Welcome back {message.from_user.first_name}! "
-                f"You are no longer AFK."
-            )
         
     except Exception as e:
         LOGGER.error(f"AFK check error: {e}")
@@ -406,10 +402,12 @@ async def show_blacklist(client: Client, message: Message):
         await message.reply_text(f"❌ Error: {str(e)}")
         LOGGER.error(f"Get blacklist error: {e}")
 
-@Client.on_message(filters.text & filters.group, group=2)
+@Client.on_message((filters.text | filters.caption) & filters.group, group=2)
 async def check_blacklist(client: Client, message: Message):
     """Check and delete messages with blacklisted words"""
     from pyrogram.enums import ChatMemberStatus
+    import asyncio
+    import re
     
     try:
         # Skip if from admin
@@ -427,20 +425,29 @@ async def check_blacklist(client: Client, message: Message):
         message_text = (message.text or message.caption or "").lower()
         
         for word in blacklist:
-            if word in message_text:
+            # Use word boundary matching to avoid false positives
+            pattern = r'\b' + re.escape(word) + r'\b'
+            if re.search(pattern, message_text):
                 try:
                     await message.delete()
                     warn_msg = await message.reply_text(
                         f"⚠️ {message.from_user.mention}, your message was deleted "
                         f"because it contains a blacklisted word!"
                     )
-                    # Auto-delete warning after 5 seconds
-                    import asyncio
-                    await asyncio.sleep(5)
-                    await warn_msg.delete()
-                except:
-                    pass
+                    # Auto-delete warning after 5 seconds (non-blocking)
+                    asyncio.create_task(self_delete_message(warn_msg))
+                except Exception as del_err:
+                    LOGGER.error(f"Error deleting blacklisted message: {del_err}")
                 break
         
     except Exception as e:
         LOGGER.error(f"Blacklist check error: {e}")
+
+async def self_delete_message(message):
+    """Helper function to auto-delete message after delay"""
+    import asyncio
+    try:
+        await asyncio.sleep(5)
+        await message.delete()
+    except Exception as e:
+        LOGGER.error(f"Error auto-deleting message: {e}")

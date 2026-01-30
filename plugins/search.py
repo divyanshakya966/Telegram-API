@@ -67,7 +67,7 @@ async def wikipedia_search(client: Client, message: Message):
                     thumbnail = data.get('thumbnail', {}).get('source', '')
                     
                     # Check if we got meaningful content
-                    if not extract or extract == 'No information available.':
+                    if not extract or not extract.strip():
                         await status.edit_text(f"❌ No information found for '{query}'!")
                         return
                     
@@ -88,7 +88,8 @@ async def wikipedia_search(client: Client, message: Message):
                                 caption=text,
                                 reply_markup=keyboard
                             )
-                        except:
+                        except Exception as photo_err:
+                            LOGGER.error(f"Failed to send photo: {photo_err}")
                             await status.edit_text(text, reply_markup=keyboard)
                     else:
                         await status.edit_text(text, reply_markup=keyboard)

@@ -129,12 +129,19 @@ async def mute_user(client: Client, message: Message):
         mute_time = None
         if len(message.command) > 2:
             time_str = message.command[2]
-            if time_str.endswith('m'):
-                mute_time = datetime.now() + timedelta(minutes=int(time_str[:-1]))
-            elif time_str.endswith('h'):
-                mute_time = datetime.now() + timedelta(hours=int(time_str[:-1]))
-            elif time_str.endswith('d'):
-                mute_time = datetime.now() + timedelta(days=int(time_str[:-1]))
+            try:
+                if time_str.endswith('m'):
+                    mute_time = datetime.now() + timedelta(minutes=int(time_str[:-1]))
+                elif time_str.endswith('h'):
+                    mute_time = datetime.now() + timedelta(hours=int(time_str[:-1]))
+                elif time_str.endswith('d'):
+                    mute_time = datetime.now() + timedelta(days=int(time_str[:-1]))
+                else:
+                    await message.reply_text("❌ Invalid time format! Use: 10m, 2h, or 1d")
+                    return
+            except (ValueError, OverflowError):
+                await message.reply_text("❌ Invalid time value! Use format like: 10m, 2h, or 1d")
+                return
         
         await client.restrict_chat_member(
             message.chat.id,
