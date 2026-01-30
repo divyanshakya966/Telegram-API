@@ -107,11 +107,16 @@ async def set_welcome(client: Client, message: Message):
         
         # Get welcome text
         if message.reply_to_message:
-            welcome_text = message.reply_to_message.text or message.reply_to_message.caption
+            welcome_text = message.reply_to_message.text or message.reply_to_message.caption or ""
             photo_id = None
             
             if message.reply_to_message.photo:
                 photo_id = message.reply_to_message.photo.file_id
+            
+            # Validate that we have some text
+            if not welcome_text.strip():
+                await message.reply_text("❌ The message you replied to has no text!")
+                return
         else:
             if len(message.command) < 2:
                 await message.reply_text(

@@ -229,7 +229,7 @@ async def pin_message(client: Client, message: Message):
             await message.reply_text("❌ Reply to a message to pin it!")
             return
         
-        loud = "loud" in message.text.lower()
+        loud = "loud" in (message.text or "").lower()
         await client.pin_chat_message(
             message.chat.id,
             message.reply_to_message.id,
