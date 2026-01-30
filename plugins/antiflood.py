@@ -3,6 +3,7 @@ Anti-flood protection plugin
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message, ChatPermissions
+from pyrogram.enums import ChatMemberStatus
 from database import Database
 from logger import LOGGER
 from collections import defaultdict
@@ -43,7 +44,7 @@ async def antiflood_handler(client: Client, message: Message):
     try:
         # Skip if from admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status in ["creator", "administrator"]:
+        if member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             return
         
         # Check chat settings
@@ -83,7 +84,7 @@ async def toggle_antiflood(client: Client, message: Message):
     try:
         # Check if admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         
@@ -118,7 +119,7 @@ async def set_flood_settings(client: Client, message: Message):
     try:
         # Check if admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         

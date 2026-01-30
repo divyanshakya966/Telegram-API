@@ -1,1 +1,13 @@
 .env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.db
+*.log
+*.sqlite
+*.sqlite3
+.DS_Store
+my_bot.session
+*.session-journal

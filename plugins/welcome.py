@@ -3,6 +3,7 @@ Welcome and goodbye messages plugin
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.enums import ChatMemberStatus
 from database import Database
 from logger import LOGGER
 
@@ -100,7 +101,7 @@ async def set_welcome(client: Client, message: Message):
     try:
         # Check if admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         
@@ -158,7 +159,7 @@ async def set_goodbye(client: Client, message: Message):
     try:
         # Check if admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         
@@ -194,7 +195,7 @@ async def toggle_welcome(client: Client, message: Message):
     try:
         # Check if admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         
@@ -242,7 +243,7 @@ async def reset_welcome(client: Client, message: Message):
     try:
         # Check if admin
         member = await client.get_chat_member(message.chat.id, message.from_user.id)
-        if member.status not in ["creator", "administrator"]:
+        if member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("❌ You need to be an admin to use this command!")
             return
         
