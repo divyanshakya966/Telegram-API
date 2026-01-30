@@ -74,16 +74,6 @@ async def help_command(client: Client, message: Message):
 • /get [name] - Get a note
 • /clear [name] - Delete a note
 
-**🎵 Media Commands:**
-• /play [query] - Play music
-• /vplay [query] - Play video
-• /pause - Pause playback
-• /resume - Resume playback
-• /skip - Skip current
-• /stop - Stop playback
-• /song [query] - Download song
-• /video [query] - Download video
-
 **🔍 Search Commands:**
 • /google [query] - Google search
 • /wiki [query] - Wikipedia search
