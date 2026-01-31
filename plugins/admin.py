@@ -36,11 +36,23 @@ async def ban_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                else:
+                    user = await client.get_users(int(user_input))
+                user_id = user.id
+                user_name = user.first_name
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -383,11 +395,23 @@ async def promote_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                else:
+                    user = await client.get_users(int(user_input))
+                user_id = user.id
+                user_name = user.first_name
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -419,11 +443,23 @@ async def demote_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                else:
+                    user = await client.get_users(int(user_input))
+                user_id = user.id
+                user_name = user.first_name
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
