@@ -68,12 +68,29 @@ async def unban_user(client: Client, message: Message):
     """Unban a user"""
     try:
         if len(message.command) < 2:
-            await message.reply_text("❌ Provide user ID to unban!")
+            await message.reply_text("❌ Provide user ID or username to unban!")
+            return
+        
+        user_input = message.command[1]
+        try:
+            # Try to get user by username or ID
+            if user_input.startswith("@"):
+                user = await client.get_users(user_input)
+                user_id = user.id
+                user_name = user.first_name
+            else:
+                user_id = int(user_input)
+                user = await client.get_users(user_id)
+                user_name = user.first_name
+        except ValueError:
+            await message.reply_text("❌ Invalid user ID!")
+            return
+        except Exception as e:
+            await message.reply_text(f"❌ User not found: {str(e)}")
             return
             
-        user_id = int(message.command[1])
         await client.unban_chat_member(message.chat.id, user_id)
-        await message.reply_text(f"✅ Unbanned user {user_id}!")
+        await message.reply_text(f"✅ Unbanned {user_name}!")
         
     except Exception as e:
         await message.reply_text(f"❌ Error: {str(e)}")
@@ -87,11 +104,23 @@ async def kick_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                else:
+                    user = await client.get_users(int(user_input))
+                user_id = user.id
+                user_name = user.first_name
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -185,11 +214,23 @@ async def unmute_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                else:
+                    user = await client.get_users(int(user_input))
+                user_id = user.id
+                user_name = user.first_name
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner (informational, unmuting owner is harmless)
@@ -357,7 +398,6 @@ async def promote_user(client: Client, message: Message):
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            can_delete_messages=True,
             can_restrict_members=True,
             can_invite_users=True,
             can_pin_messages=True,
@@ -394,7 +434,6 @@ async def demote_user(client: Client, message: Message):
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            can_delete_messages=False,
             can_restrict_members=False,
             can_invite_users=False,
             can_pin_messages=False,

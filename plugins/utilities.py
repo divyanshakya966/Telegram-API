@@ -248,6 +248,10 @@ async def set_afk(client: Client, message: Message):
 async def check_afk(client: Client, message: Message):
     """Check if mentioned user is AFK"""
     try:
+        # Skip if this is the /afk command itself
+        if message.text and message.text.startswith("/afk"):
+            return
+        
         # Check if sender was AFK
         sender_afk = await db.is_afk(message.from_user.id)
         if sender_afk:
