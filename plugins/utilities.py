@@ -249,7 +249,7 @@ async def check_afk(client: Client, message: Message):
     """Check if mentioned user is AFK"""
     try:
         # Skip if this is the /afk command itself
-        if message.text and message.text.startswith("/afk"):
+        if message.text and message.text.split()[0] in ["/afk", "/afk@" + (await client.get_me()).username]:
             return
         
         # Check if sender was AFK

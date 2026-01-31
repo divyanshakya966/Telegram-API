@@ -13,6 +13,33 @@ from datetime import datetime, timedelta
 
 db = Database()
 
+async def parse_user_input(client: Client, user_input: str):
+    """
+    Parse user input to get user ID and name
+    
+    Args:
+        client: Pyrogram client instance
+        user_input: Username (@username) or user ID (numeric string)
+    
+    Returns:
+        tuple: (user_id: int, user_name: str) or raises exception
+    
+    Raises:
+        ValueError: If user_input is not a valid username or ID
+        Exception: If user not found
+    """
+    try:
+        # Try to get user by username or ID
+        if user_input.startswith("@"):
+            user = await client.get_users(user_input)
+        else:
+            user = await client.get_users(int(user_input))
+        return user.id, user.first_name
+    except ValueError:
+        raise ValueError("Invalid user ID!")
+    except Exception as e:
+        raise Exception(f"User not found: {str(e)}")
+
 def admin_check(func):
     """Decorator to check if user is admin"""
     async def wrapper(client: Client, message: Message):
@@ -38,18 +65,12 @@ async def ban_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -85,20 +106,12 @@ async def unban_user(client: Client, message: Message):
         
         user_input = message.command[1]
         try:
-            # Try to get user by username or ID
-            if user_input.startswith("@"):
-                user = await client.get_users(user_input)
-                user_id = user.id
-                user_name = user.first_name
-            else:
-                user_id = int(user_input)
-                user = await client.get_users(user_id)
-                user_name = user.first_name
-        except ValueError:
-            await message.reply_text("❌ Invalid user ID!")
+            user_id, user_name = await parse_user_input(client, user_input)
+        except ValueError as ve:
+            await message.reply_text(f"❌ {str(ve)}")
             return
         except Exception as e:
-            await message.reply_text(f"❌ User not found: {str(e)}")
+            await message.reply_text(f"❌ {str(e)}")
             return
             
         await client.unban_chat_member(message.chat.id, user_id)
@@ -118,18 +131,12 @@ async def kick_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -164,18 +171,12 @@ async def mute_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -228,18 +229,12 @@ async def unmute_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -313,17 +308,12 @@ async def reset_warns(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                    user_id = user.id
-                else:
-                    user_id = int(user_input)
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, _ = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -410,18 +400,12 @@ async def promote_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -458,18 +442,12 @@ async def demote_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
