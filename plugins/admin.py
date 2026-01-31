@@ -25,7 +25,7 @@ async def parse_user_input(client: Client, user_input: str):
         tuple: (user_id: int, user_name: str) or raises exception
     
     Raises:
-        ValueError: If user_input is not a valid username or ID
+        ValueError: If user_input is not a valid username or ID format
         Exception: If user not found
     """
     try:
@@ -36,7 +36,7 @@ async def parse_user_input(client: Client, user_input: str):
             user = await client.get_users(int(user_input))
         return user.id, user.first_name
     except ValueError:
-        raise ValueError("Invalid user ID!")
+        raise ValueError("Invalid user ID or username format!")
     except Exception as e:
         raise Exception(f"User not found: {str(e)}")
 
