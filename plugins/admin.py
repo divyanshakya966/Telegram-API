@@ -311,9 +311,22 @@ async def reset_warns(client: Client, message: Message):
         if message.reply_to_message:
             user_id = message.reply_to_message.from_user.id
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
+            user_input = message.command[1]
+            try:
+                # Try to get user by username or ID
+                if user_input.startswith("@"):
+                    user = await client.get_users(user_input)
+                    user_id = user.id
+                else:
+                    user_id = int(user_input)
+            except ValueError:
+                await message.reply_text("❌ Invalid user ID!")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ User not found: {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
