@@ -18,10 +18,16 @@ def async_db_operation(func):
     return wrapper
 
 class Database:
+    _initialized = False  # Class variable to track if we've logged initialization
+    
     def __init__(self, db_path: str = "telegram_bot.db"):
         self.db_path = db_path
         self._init_db()
-        LOGGER.info(f"SQLite Database initialized at {db_path}")
+        
+        # Only log once for the entire application
+        if not Database._initialized:
+            LOGGER.info(f"SQLite Database initialized at {db_path}")
+            Database._initialized = True
         
     def _init_db(self):
         """Initialize database tables"""

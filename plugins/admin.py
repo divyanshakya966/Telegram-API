@@ -13,6 +13,33 @@ from datetime import datetime, timedelta
 
 db = Database()
 
+async def parse_user_input(client: Client, user_input: str):
+    """
+    Parse user input to get user ID and name
+    
+    Args:
+        client: Pyrogram client instance
+        user_input: Username (@username) or user ID (numeric string)
+    
+    Returns:
+        tuple: (user_id: int, user_name: str) or raises exception
+    
+    Raises:
+        ValueError: If user_input is not a valid username or ID format
+        Exception: If user not found
+    """
+    try:
+        # Try to get user by username or ID
+        if user_input.startswith("@"):
+            user = await client.get_users(user_input)
+        else:
+            user = await client.get_users(int(user_input))
+        return user.id, user.first_name
+    except ValueError:
+        raise ValueError("Invalid user ID or username format!")
+    except Exception as e:
+        raise Exception(f"User not found: {str(e)}")
+
 def admin_check(func):
     """Decorator to check if user is admin"""
     async def wrapper(client: Client, message: Message):
@@ -36,11 +63,17 @@ async def ban_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -68,12 +101,21 @@ async def unban_user(client: Client, message: Message):
     """Unban a user"""
     try:
         if len(message.command) < 2:
-            await message.reply_text("❌ Provide user ID to unban!")
+            await message.reply_text("❌ Provide user ID or username to unban!")
+            return
+        
+        user_input = message.command[1]
+        try:
+            user_id, user_name = await parse_user_input(client, user_input)
+        except ValueError as ve:
+            await message.reply_text(f"❌ {str(ve)}")
+            return
+        except Exception as e:
+            await message.reply_text(f"❌ {str(e)}")
             return
             
-        user_id = int(message.command[1])
         await client.unban_chat_member(message.chat.id, user_id)
-        await message.reply_text(f"✅ Unbanned user {user_id}!")
+        await message.reply_text(f"✅ Unbanned {user_name}!")
         
     except Exception as e:
         await message.reply_text(f"❌ Error: {str(e)}")
@@ -87,11 +129,17 @@ async def kick_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -123,18 +171,12 @@ async def mute_user(client: Client, message: Message):
         elif len(message.command) > 1:
             user_input = message.command[1]
             try:
-                # Try to get user by username or ID
-                if user_input.startswith("@"):
-                    user = await client.get_users(user_input)
-                else:
-                    user = await client.get_users(int(user_input))
-                user_id = user.id
-                user_name = user.first_name
-            except ValueError:
-                await message.reply_text("❌ Invalid user ID!")
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
                 return
             except Exception as e:
-                await message.reply_text(f"❌ User not found: {str(e)}")
+                await message.reply_text(f"❌ {str(e)}")
                 return
         else:
             await message.reply_text("❌ Reply to a user or provide user ID/username!")
@@ -185,11 +227,17 @@ async def unmute_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner (informational, unmuting owner is harmless)
@@ -258,9 +306,17 @@ async def reset_warns(client: Client, message: Message):
         if message.reply_to_message:
             user_id = message.reply_to_message.from_user.id
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
+            user_input = message.command[1]
+            try:
+                user_id, _ = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -342,11 +398,17 @@ async def promote_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -357,7 +419,6 @@ async def promote_user(client: Client, message: Message):
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            can_delete_messages=True,
             can_restrict_members=True,
             can_invite_users=True,
             can_pin_messages=True,
@@ -379,11 +440,17 @@ async def demote_user(client: Client, message: Message):
             user_id = message.reply_to_message.from_user.id
             user_name = message.reply_to_message.from_user.first_name
         elif len(message.command) > 1:
-            user_id = int(message.command[1])
-            user = await client.get_users(user_id)
-            user_name = user.first_name
+            user_input = message.command[1]
+            try:
+                user_id, user_name = await parse_user_input(client, user_input)
+            except ValueError as ve:
+                await message.reply_text(f"❌ {str(ve)}")
+                return
+            except Exception as e:
+                await message.reply_text(f"❌ {str(e)}")
+                return
         else:
-            await message.reply_text("❌ Reply to a user or provide user ID!")
+            await message.reply_text("❌ Reply to a user or provide user ID/username!")
             return
         
         # Check if target is the bot owner
@@ -394,7 +461,6 @@ async def demote_user(client: Client, message: Message):
         await client.promote_chat_member(
             message.chat.id,
             user_id,
-            can_delete_messages=False,
             can_restrict_members=False,
             can_invite_users=False,
             can_pin_messages=False,

@@ -12,6 +12,17 @@ from datetime import datetime
 
 db = Database()
 
+# Cache bot username to avoid repeated API calls
+_bot_username = None
+
+async def get_bot_username(client: Client) -> str:
+    """Get and cache bot username"""
+    global _bot_username
+    if _bot_username is None:
+        me = await client.get_me()
+        _bot_username = me.username
+    return _bot_username
+
 @Client.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
     """Start command"""
@@ -248,6 +259,13 @@ async def set_afk(client: Client, message: Message):
 async def check_afk(client: Client, message: Message):
     """Check if mentioned user is AFK"""
     try:
+        # Skip if this is the /afk command itself
+        if message.text:
+            bot_username = await get_bot_username(client)
+            first_word = message.text.split()[0]
+            if first_word in ["/afk", f"/afk@{bot_username}"]:
+                return
+        
         # Check if sender was AFK
         sender_afk = await db.is_afk(message.from_user.id)
         if sender_afk:

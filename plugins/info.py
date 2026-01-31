@@ -4,7 +4,7 @@ User information extraction commands
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.errors import PeerIdInvalid, UsernameNotOccupied
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus, ChatMembersFilter
 from logger import LOGGER
 import time
 
@@ -202,7 +202,7 @@ async def chat_info(client: Client, message: Message):
         # Get admins count
         try:
             admins = []
-            async for member in client.get_chat_members(chat.id, filter="administrators"):
+            async for member in client.get_chat_members(chat.id, filter=ChatMembersFilter.ADMINISTRATORS):
                 admins.append(member)
             text += f"👮 **Admins:** {len(admins)}\n"
         except:
@@ -230,7 +230,7 @@ async def list_admins(client: Client, message: Message):
     try:
         admins_list = []
         
-        async for member in client.get_chat_members(message.chat.id, filter="administrators"):
+        async for member in client.get_chat_members(message.chat.id, filter=ChatMembersFilter.ADMINISTRATORS):
             # Handle enum status properly
             is_owner = member.status == ChatMemberStatus.OWNER
             
@@ -260,13 +260,13 @@ async def chat_stats(client: Client, message: Message):
         bots = 0
         banned = 0
         
-        async for member in client.get_chat_members(message.chat.id, filter="administrators"):
+        async for member in client.get_chat_members(message.chat.id, filter=ChatMembersFilter.ADMINISTRATORS):
             admins += 1
             if member.user.is_bot:
                 bots += 1
         
         try:
-            async for member in client.get_chat_members(message.chat.id, filter="banned"):
+            async for member in client.get_chat_members(message.chat.id, filter=ChatMembersFilter.BANNED):
                 banned += 1
         except:
             banned = "N/A"
